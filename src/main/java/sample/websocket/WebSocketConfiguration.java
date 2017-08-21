@@ -8,7 +8,7 @@ import org.springframework.web.socket.client.standard.StandardWebSocketClient;
 @Configuration
 public class WebSocketConfiguration {
 
-    private static final String WS_URI = "ws://localhost:8080/echo";
+    private static final String WS_URI = "ws://localhost:8444/my-ws";
 
     @Bean
     public WebSocketConnectionManager connectionManager() {

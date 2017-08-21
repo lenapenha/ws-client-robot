@@ -21,13 +21,15 @@ public class ClientApp extends Application {
     private MainLayout mainLayout;
 
     public static void main(String[] args) {
+
+
         launch(args);
     }
 
     @Override
     public void start(Stage stage) throws Exception {
-        stage.setScene(new Scene(mainLayout));
-        stage.show();
+//        stage.setScene(new Scene(mainLayout));
+//        stage.show();
     }
 
     @Override
