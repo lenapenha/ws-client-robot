@@ -16,6 +16,7 @@ import sample.component.RegisterModel;
 import sample.serial.SerialComm;
 
 import java.io.IOException;
+import java.util.ArrayList;
 
 public class SimpleClientWebSocketHandler extends TextWebSocketHandler {
     private static final Gson gson = new GsonBuilder().create();
@@ -58,19 +59,35 @@ public class SimpleClientWebSocketHandler extends TextWebSocketHandler {
 
     @Override
     public void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
+        JsonObject jsonMessage = gson.fromJson(message.getPayload(), JsonObject.class);
 
-        executaComando(message.getPayload());
+        executaComando(jsonMessage, session);
 
 //        receivedTextAreaComponent.appendText(message.getPayload() + System.lineSeparator());
     }
 
-    private void executaComando(String message) throws IOException{
-        System.out.println(message);
+    private void executaComando(JsonObject jsonMessage, WebSocketSession session) throws IOException{
+        String message = jsonMessage.get("id").getAsString();
+        System.out.println(jsonMessage.toString());
 
-        switch (message) {
-            case "$js.cmd.fwd" :
+        ArrayList<String> comandos = new ArrayList<>();
+        comandos.add("$js.cmd.fwd");
+        comandos.add("$js.cmd.bwd");
+        comandos.add("$js.cmd.lft");
+        comandos.add("$js.cmd.rgt");
+
+        if (!message.equals("connectionResponseWS") && !message.equals("resgisterResponseWS")) {
+            String responseMsg = "acepted";
+
+            if(comandos.contains(jsonMessage.get("cmd").getAsString())){
                 System.out.println("$pi.cmd.fwd");
 //                comm.serial.writeln("$pi.cmd.fwd");
+            }
+
+            JsonObject response = new JsonObject();
+            response.addProperty("id", "comandResponseRobot");
+            response.addProperty("response", responseMsg);
+            session.sendMessage(new TextMessage(response.toString()));
         }
 
     }
