@@ -3,8 +3,6 @@ package sample.websocket;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
-import com.pi4j.io.serial.SerialDataEvent;
-import com.pi4j.io.serial.SerialDataEventListener;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
@@ -13,7 +11,6 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import sample.component.ReceivedTextAreaComponent;
 import sample.component.RegisterModel;
-import sample.serial.SerialComm;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -21,10 +18,9 @@ import java.util.ArrayList;
 public class SimpleClientWebSocketHandler extends TextWebSocketHandler {
     private static final Gson gson = new GsonBuilder().create();
 
-    @Autowired
-    private ReceivedTextAreaComponent receivedTextAreaComponent;
-
     private WebSocketSession session;
+    private boolean fwdBlocked;
+    private boolean bwdBlocked;
 
 //    SerialComm comm = new SerialComm();
 
@@ -41,7 +37,7 @@ public class SimpleClientWebSocketHandler extends TextWebSocketHandler {
 //        comm.serial.addListener(new SerialDataEventListener() {
 //            @Override
 //            public void dataReceived(SerialDataEvent event) {
-//
+
 //                // NOTE! - It is extremely important to read the data received from the
 //                // serial port.  If it does not get read from the receive buffer, the
 //                // buffer will continue to grow and consume memory.
@@ -50,6 +46,38 @@ public class SimpleClientWebSocketHandler extends TextWebSocketHandler {
 //                try {
 //                    //comm.console.println("[HEX DATA]   " + event.getHexByteString());
 //                    comm.console.println("[ASCII DATA] " + event.getAsciiString());
+
+                    float sensorDistanceOne = 9999, sensorDistanceTwo = 9999, sensorDistanceTree = 9999,
+                            sensorDistanceFor = 9999, sensorDistanceFive = 9999, sensorDistanceSix = 9999;
+
+                    if(!fwdBlocked) {
+                        if(sensorDistanceOne <= 30 ||
+                                sensorDistanceTwo <= 15 || sensorDistanceTree <= 15 || sensorDistanceFor <= 15 || sensorDistanceFive <= 15) {
+                            fwdBlocked = true;
+                            sendComand("$pi.blk.fwd");
+                        }
+                    } else {
+                        if(sensorDistanceOne > 30 &&
+                                sensorDistanceTwo > 15 && sensorDistanceTree > 15 && sensorDistanceFor > 15 && sensorDistanceFive > 15) {
+                            fwdBlocked = false;
+                            sendComand("$pi.rls.fwd");
+                        }
+                    }
+
+                    if (!bwdBlocked) {
+                        if(sensorDistanceSix <= 15) {
+                            bwdBlocked = true;
+                            sendComand("$pi.blk.bwd");
+                        }
+                    } else {
+                        if(sensorDistanceSix > 15) {
+                            bwdBlocked = false;
+                            sendComand("$pi.rls. bwd");
+                        }
+                    }
+
+
+
 //                } catch (IOException e) {
 //                    e.printStackTrace();
 //                }
@@ -60,26 +88,23 @@ public class SimpleClientWebSocketHandler extends TextWebSocketHandler {
     @Override
     public void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
         JsonObject jsonMessage = gson.fromJson(message.getPayload(), JsonObject.class);
-
-        executaComando(jsonMessage, session);
-
-//        receivedTextAreaComponent.appendText(message.getPayload() + System.lineSeparator());
+        executeComand(jsonMessage);
     }
 
-    private void executaComando(JsonObject jsonMessage, WebSocketSession session) throws IOException{
+    private void executeComand(JsonObject jsonMessage) throws IOException{
         String message = jsonMessage.get("id").getAsString();
         System.out.println(jsonMessage.toString());
 
-        ArrayList<String> comandos = new ArrayList<>();
-        comandos.add("$js.cmd.fwd");
-        comandos.add("$js.cmd.bwd");
-        comandos.add("$js.cmd.lft");
-        comandos.add("$js.cmd.rgt");
+        ArrayList<String> comands = new ArrayList<>();
+        comands.add("$js.cmd.fwd");
+        comands.add("$js.cmd.bwd");
+        comands.add("$js.cmd.lft");
+        comands.add("$js.cmd.rgt");
 
         if (!message.equals("connectionResponseWS") && !message.equals("resgisterResponseWS")) {
-            String responseMsg = "acepted";
+            String responseMsg = "received";
 
-            if(comandos.contains(jsonMessage.get("cmd").getAsString())){
+            if(comands.contains(jsonMessage.get("cmd").getAsString())){
                 System.out.println("$pi.cmd.fwd");
 //                comm.serial.writeln("$pi.cmd.fwd");
             }
@@ -101,4 +126,10 @@ public class SimpleClientWebSocketHandler extends TextWebSocketHandler {
         return session;
     }
 
+    private void sendComand(String comand) throws IOException {
+        JsonObject response = new JsonObject();
+        response.addProperty("id", "command");
+        response.addProperty("cmd", comand);
+        session.sendMessage(new TextMessage(response.toString()));
+    }
 }
