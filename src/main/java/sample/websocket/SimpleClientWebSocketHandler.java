@@ -3,14 +3,14 @@ package sample.websocket;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.pi4j.io.serial.SerialDataEvent;
+import com.pi4j.io.serial.SerialDataEventListener;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
-
-import sample.component.ReceivedTextAreaComponent;
 import sample.component.RegisterModel;
+import sample.serial.SerialComm;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -19,117 +19,148 @@ public class SimpleClientWebSocketHandler extends TextWebSocketHandler {
     private static final Gson gson = new GsonBuilder().create();
 
     private WebSocketSession session;
-    private boolean fwdBlocked;
-    private boolean bwdBlocked;
+    private String inputString;
 
-//    SerialComm comm = new SerialComm();
+    SerialComm comm = new SerialComm();
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
-
-
         this.session = session;
         RegisterModel registerModel = new RegisterModel("register", "Rasp");
 
         Gson gson = new Gson();
         getSession().sendMessage(new TextMessage(gson.toJson(registerModel)));
 
-//        comm.serial.addListener(new SerialDataEventListener() {
-//            @Override
-//            public void dataReceived(SerialDataEvent event) {
-
-//                // NOTE! - It is extremely important to read the data received from the
-//                // serial port.  If it does not get read from the receive buffer, the
-//                // buffer will continue to grow and consume memory.
-//
-//                // print out the data received to the console
-//                try {
-//                    //comm.console.println("[HEX DATA]   " + event.getHexByteString());
-//                    comm.console.println("[ASCII DATA] " + event.getAsciiString());
-
-                    float sensorDistanceOne = 9999, sensorDistanceTwo = 9999, sensorDistanceTree = 9999,
-                            sensorDistanceFor = 9999, sensorDistanceFive = 9999, sensorDistanceSix = 9999;
-
-                    if(!fwdBlocked) {
-                        if(sensorDistanceOne <= 30 ||
-                                sensorDistanceTwo <= 15 || sensorDistanceTree <= 15 || sensorDistanceFor <= 15 || sensorDistanceFive <= 15) {
-                            fwdBlocked = true;
-                            sendComand("$pi.blk.fwd");
-                        }
-                    } else {
-                        if(sensorDistanceOne > 30 &&
-                                sensorDistanceTwo > 15 && sensorDistanceTree > 15 && sensorDistanceFor > 15 && sensorDistanceFive > 15) {
-                            fwdBlocked = false;
-                            sendComand("$pi.rls.fwd");
-                        }
-                    }
-
-                    if (!bwdBlocked) {
-                        if(sensorDistanceSix <= 15) {
-                            bwdBlocked = true;
-                            sendComand("$pi.blk.bwd");
-                        }
-                    } else {
-                        if(sensorDistanceSix > 15) {
-                            bwdBlocked = false;
-                            sendComand("$pi.rls. bwd");
-                        }
-                    }
-
-
-
-//                } catch (IOException e) {
-//                    e.printStackTrace();
-//                }
-//            }
-//        });
+        comm.serial.addListener(new SerialDataEventListener() {
+            @Override
+            public void dataReceived(SerialDataEvent event) {
+                try {
+                    //comm.console.println("[HEX DATA]   " + event.getHexByteString());
+                    //comm.console.println("[ASCII DATA] " + event.getAsciiString());
+                    inputString = event.getAsciiString();
+                    comm.console.println("ReceivedFromSerial -> " + inputString);
+                    checkSerialMessage(inputString);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
     }
+
+    private void refuseSerialMessage(String message) throws IOException {
+        comm.console.println("SendToSerial -> $pi.rfs,msg{" + message + "}");
+        comm.serial.writeln("$pi.rfs,msg{" + message + "}");
+    }
+
+    private void refusePeerMessage() throws IOException {
+        comm.console.println("SendToSerial -> $pi.rfs,peer");
+        comm.serial.writeln("$pi.rfs,peer");
+    }
+
+    private void checkSerialMessage(String message) throws IOException{
+        if(inputString.substring(0,2).equals("$ad")){
+            switch (inputString.substring(4, 6)) {
+                case "cmd":
+                    checkSerialCommand(message);
+                    break;
+                case "sen":
+                    checkSensorMessage(message);
+                    break;
+                case "rfs":
+                    checkRefuseMessage(message);
+                    break;
+                case "rsp":
+                    break;
+                default:
+                    refuseSerialMessage(message);
+                    break;
+            }
+        } else refusePeerMessage();
+    }
+
+    private void checkSerialCommand(String message) throws IOException {
+        String command = message.substring(8);
+        if(command.equals("blk.fwd") || command.equals("blk.bwd") || command.equals("rls.fwd") || command.equals("rls.bwd")) {
+            forwardSerialCommand(command);
+        } else refuseSerialMessage(message);
+    }
+
+    private void forwardSerialCommand(String command) throws IOException {
+        comm.console.println("$pi.rsp," + command);
+        comm.serial.writeln("$pi.rsp," + command);
+        sendSocketCommand("$pi.cmd," + command);
+    }
+
+    private void forwardSocketCommand(String command) throws IOException {
+        comm.console.println("$pi.cmd," + command);
+        comm.serial.writeln("$pi.cmd," + command);
+        sendSocketCommand("$pi.rsp," + command);
+    }
+
+    private void checkSensorMessage(String sensor) {
+        // Escreve no log txt
+        //comm.console.println("SensorLogInsert ->" + log);
+    }
+
+    private void checkRefuseMessage(String refuse) {
+        // Escreve no log txt
+        //comm.console.println("RefuseLogInsert ->" + log);
+    }
+
+
 
     @Override
     public void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
         JsonObject jsonMessage = gson.fromJson(message.getPayload(), JsonObject.class);
-        executeComand(jsonMessage);
+        executeCommand(jsonMessage);
     }
 
-    private void executeComand(JsonObject jsonMessage) throws IOException{
+    private void executeCommand(JsonObject jsonMessage) throws IOException{
         String message = jsonMessage.get("id").getAsString();
         System.out.println(jsonMessage.toString());
 
-        ArrayList<String> comands = new ArrayList<>();
-        comands.add("$js.cmd.fwd");
-        comands.add("$js.cmd.bwd");
-        comands.add("$js.cmd.lft");
-        comands.add("$js.cmd.rgt");
+        ArrayList<String> commands = new ArrayList<>();
+            commands.add("$js.cmd,fwd");
+            commands.add("$js.cmd,bwd");
+            commands.add("$js.cmd,lft");
+            commands.add("$js.cmd,rgt");
 
-        if (!message.equals("connectionResponseWS") && !message.equals("resgisterResponseWS")) {
+        ArrayList<String> responses = new ArrayList<>();
+            commands.add("$js.rsp,blk.fwd");
+            commands.add("$js.rsp,blk.bwd");
+
+        if (!message.equals("connectionResponseWS") && !message.equals("registerResponseWS")) {
             String responseMsg = "received";
 
-            if(comands.contains(jsonMessage.get("cmd").getAsString())){
-                System.out.println("$pi.cmd.fwd");
-//                comm.serial.writeln("$pi.cmd.fwd");
+            if(commands.contains(jsonMessage.get("command").getAsString())){
+                String command = "$pi.cmd," + jsonMessage.get("cmd").getAsString().substring(8);
+                //System.out.println(command);
+                forwardSocketCommand(command);
+            }
+
+            if(commands.contains(jsonMessage.get("response").getAsString())){
+                String response = "$pi.cmd," + jsonMessage.get("cmd").getAsString().substring(8);
+                System.out.println(response);
             }
 
             JsonObject response = new JsonObject();
-            response.addProperty("id", "comandResponseRobot");
+            response.addProperty("id", "commandResponseRobot");
             response.addProperty("response", responseMsg);
             session.sendMessage(new TextMessage(response.toString()));
         }
-
     }
 
     @Override
-    public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
-
-    }
+    public void afterConnectionClosed(WebSocketSession session, CloseStatus status) { }
 
     public WebSocketSession getSession() {
         return session;
     }
 
-    private void sendComand(String comand) throws IOException {
+    private void sendSocketCommand(String command) throws IOException {
         JsonObject response = new JsonObject();
         response.addProperty("id", "command");
-        response.addProperty("cmd", comand);
+        response.addProperty("cmd", command);
         session.sendMessage(new TextMessage(response.toString()));
     }
 }
