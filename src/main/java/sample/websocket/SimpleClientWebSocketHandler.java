@@ -129,23 +129,23 @@ public class SimpleClientWebSocketHandler extends TextWebSocketHandler {
             commands.add("$js.rsp,blk.fwd");
             commands.add("$js.rsp,blk.bwd");
 
-        if (!message.equals("connectionResponseWS") && !message.equals("registerResponseWS")) {
-            String responseMsg = "received";
-
-            if(commands.contains(jsonMessage.get("command").getAsString())){
-                String command = "$pi.cmd," + jsonMessage.get("cmd").getAsString().substring(8);
-                //System.out.println(command);
-                forwardSocketCommand(command);
-            }
-
-            if(commands.contains(jsonMessage.get("response").getAsString())){
-                String response = "$pi.cmd," + jsonMessage.get("cmd").getAsString().substring(8);
-                System.out.println(response);
-            }
-
+        if (message.equals("command")) {
             JsonObject response = new JsonObject();
-            response.addProperty("id", "commandResponseRobot");
-            response.addProperty("response", responseMsg);
+            String responseMsg;
+            String commandMsg = "$pi.cmd,";
+
+            if(commands.contains(jsonMessage.get("msg").getAsString())) {
+                responseMsg = "$pi.rsp," +jsonMessage.get("msg").getAsString().substring(8);
+                commandMsg += jsonMessage.get("msg").getAsString().substring(8);
+                forwardSocketCommand(commandMsg);
+            }
+            else {
+                responseMsg = "$pi.rfs,msg{" + jsonMessage.get("msg").getAsString() + "}";
+            }
+            response.addProperty("id", "response");
+            response.addProperty("to", "to");
+            response.addProperty("from", "From");
+            response.addProperty("msg", responseMsg);
             session.sendMessage(new TextMessage(response.toString()));
         }
     }
@@ -160,7 +160,7 @@ public class SimpleClientWebSocketHandler extends TextWebSocketHandler {
     private void sendSocketCommand(String command) throws IOException {
         JsonObject response = new JsonObject();
         response.addProperty("id", "command");
-        response.addProperty("cmd", command);
+        response.addProperty("msg", command);
         session.sendMessage(new TextMessage(response.toString()));
     }
 }
