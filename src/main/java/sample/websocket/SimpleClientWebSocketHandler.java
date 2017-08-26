@@ -163,6 +163,8 @@ public class SimpleClientWebSocketHandler extends TextWebSocketHandler {
     private void sendSocketCommand(String command) throws IOException {
         JsonObject response = new JsonObject();
         response.addProperty("id", "command");
+        response.addProperty("from", this.NAME_RASP);
+        response.addProperty("to", this.namePeer);
         response.addProperty("message", command);
         session.sendMessage(new TextMessage(response.toString()));
     }
