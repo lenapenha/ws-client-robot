@@ -23,7 +23,7 @@ public class SimpleClientWebSocketHandler extends TextWebSocketHandler {
     private WebSocketSession session;
     private String inputString;
 
-    SerialComm comm = new SerialComm();
+//    SerialComm comm = new SerialComm();
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
@@ -33,81 +33,81 @@ public class SimpleClientWebSocketHandler extends TextWebSocketHandler {
         Gson gson = new Gson();
         getSession().sendMessage(new TextMessage(gson.toJson(registerModel)));
 
-        comm.serial.addListener(new SerialDataEventListener() {
-            @Override
-            public void dataReceived(SerialDataEvent event) {
-                try {
-                    //comm.console.println("[HEX DATA]   " + event.getHexByteString());
-                    //comm.console.println("[ASCII DATA] " + event.getAsciiString());
-                    inputString = event.getAsciiString();
-                    comm.console.println("ReceivedFromSerial -> " + inputString);
-                    checkSerialMessage(inputString);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        });
+//        comm.serial.addListener(new SerialDataEventListener() {
+//            @Override
+//            public void dataReceived(SerialDataEvent event) {
+//                try {
+//                    //comm.console.println("[HEX DATA]   " + event.getHexByteString());
+//                    //comm.console.println("[ASCII DATA] " + event.getAsciiString());
+//                    inputString = event.getAsciiString();
+//                    comm.console.println("ReceivedFromSerial -> " + inputString);
+//                    checkSerialMessage(inputString);
+//                } catch (IOException e) {
+//                    e.printStackTrace();
+//                }
+//            }
+//        });
     }
 
-    private void refuseSerialMessage(String message) throws IOException {
-        comm.console.println("SendToSerial -> $pi.rfs,msg{" + message + "}");
-        comm.serial.writeln("$pi.rfs,msg{" + message + "}");
-    }
-
-    private void refusePeerMessage() throws IOException {
-        comm.console.println("SendToSerial -> $pi.rfs,peer");
-        comm.serial.writeln("$pi.rfs,peer");
-    }
-
-    private void checkSerialMessage(String message) throws IOException{
-        if(inputString.substring(0,2).equals("$ad")){
-            switch (inputString.substring(4, 6)) {
-                case "cmd":
-                    checkSerialCommand(message);
-                    break;
-                case "sen":
-                    checkSensorMessage(message);
-                    break;
-                case "rfs":
-                    checkRefuseMessage(message);
-                    break;
-                case "rsp":
-                    break;
-                default:
-                    refuseSerialMessage(message);
-                    break;
-            }
-        } else refusePeerMessage();
-    }
-
-    private void checkSerialCommand(String message) throws IOException {
-        String command = message.substring(8);
-        if(command.equals("blk.fwd") || command.equals("blk.bwd") || command.equals("rls.fwd") || command.equals("rls.bwd")) {
-            forwardSerialCommand(command);
-        } else refuseSerialMessage(message);
-    }
-
-    private void forwardSerialCommand(String command) throws IOException {
-        comm.console.println("$pi.rsp," + command);
-        comm.serial.writeln("$pi.rsp," + command);
-        sendSocketCommand("$pi.cmd," + command);
-    }
-
-    private void forwardSocketCommand(String command) throws IOException {
-        comm.console.println("$pi.cmd," + command);
-        comm.serial.writeln("$pi.cmd," + command);
-        sendSocketCommand("$pi.rsp," + command);
-    }
-
-    private void checkSensorMessage(String sensor) {
-        // Escreve no log txt
-        //comm.console.println("SensorLogInsert ->" + log);
-    }
-
-    private void checkRefuseMessage(String refuse) {
-        // Escreve no log txt
-        //comm.console.println("RefuseLogInsert ->" + log);
-    }
+//    private void refuseSerialMessage(String message) throws IOException {
+//        comm.console.println("SendToSerial -> $pi.rfs,msg{" + message + "}");
+//        comm.serial.writeln("$pi.rfs,msg{" + message + "}");
+//    }
+//
+//    private void refusePeerMessage() throws IOException {
+//        comm.console.println("SendToSerial -> $pi.rfs,peer");
+//        comm.serial.writeln("$pi.rfs,peer");
+//    }
+//
+//    private void checkSerialMessage(String message) throws IOException{
+//        if(inputString.substring(0,2).equals("$ad")){
+//            switch (inputString.substring(4, 6)) {
+//                case "cmd":
+//                    checkSerialCommand(message);
+//                    break;
+//                case "sen":
+//                    checkSensorMessage(message);
+//                    break;
+//                case "rfs":
+//                    checkRefuseMessage(message);
+//                    break;
+//                case "rsp":
+//                    break;
+//                default:
+//                    refuseSerialMessage(message);
+//                    break;
+//            }
+//        } else refusePeerMessage();
+//    }
+//
+//    private void checkSerialCommand(String message) throws IOException {
+//        String command = message.substring(8);
+//        if(command.equals("blk.fwd") || command.equals("blk.bwd") || command.equals("rls.fwd") || command.equals("rls.bwd")) {
+//            forwardSerialCommand(command);
+//        } else refuseSerialMessage(message);
+//    }
+//
+//    private void forwardSerialCommand(String command) throws IOException {
+//        comm.console.println("$pi.rsp," + command);
+//        comm.serial.writeln("$pi.rsp," + command);
+//        sendSocketCommand("$pi.cmd," + command);
+//    }
+//
+//    private void forwardSocketCommand(String command) throws IOException {
+//        comm.console.println("$pi.cmd," + command);
+//        comm.serial.writeln("$pi.cmd," + command);
+//        sendSocketCommand("$pi.rsp," + command);
+//    }
+//
+//    private void checkSensorMessage(String sensor) {
+//        // Escreve no log txt
+//        //comm.console.println("SensorLogInsert ->" + log);
+//    }
+//
+//    private void checkRefuseMessage(String refuse) {
+//        // Escreve no log txt
+//        //comm.console.println("RefuseLogInsert ->" + log);
+//    }
 
     @Override
     public void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
@@ -124,7 +124,7 @@ public class SimpleClientWebSocketHandler extends TextWebSocketHandler {
             commands.add("$js.cmd,bwd");
             commands.add("$js.cmd,lft");
             commands.add("$js.cmd,rgt");
-            commands.add("$js.cmd.stp");
+            commands.add("$js.cmd,stp");
 
         ArrayList<String> responses = new ArrayList<>();
             commands.add("$js.rsp,blk.fwd");
@@ -140,7 +140,7 @@ public class SimpleClientWebSocketHandler extends TextWebSocketHandler {
             if(commands.contains(jsonMessage.get("message").getAsString())) {
                 responseMsg = "$pi.rsp," +jsonMessage.get("message").getAsString().substring(8);
                 commandMsg += jsonMessage.get("message").getAsString().substring(8);
-                forwardSocketCommand(commandMsg);
+//                forwardSocketCommand(commandMsg);
             }
             else {
                 responseMsg = "$pi.rfs,msg{" + jsonMessage.get("message").getAsString() + "}";
