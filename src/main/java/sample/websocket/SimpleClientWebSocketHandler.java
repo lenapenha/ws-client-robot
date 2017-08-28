@@ -129,6 +129,8 @@ public class SimpleClientWebSocketHandler extends TextWebSocketHandler {
         ArrayList<String> responses = new ArrayList<>();
             commands.add("$js.rsp,blk.fwd");
             commands.add("$js.rsp,blk.bwd");
+            commands.add("$js.rsp,rls.fwd");
+            commands.add("$js.rsp,rls.bwd");
 
         if (message.equals("command")) {
             JsonObject response = new JsonObject();
@@ -138,14 +140,16 @@ public class SimpleClientWebSocketHandler extends TextWebSocketHandler {
             this.namePeer = jsonMessage.get("from").getAsString();
 
             if(commands.contains(jsonMessage.get("message").getAsString())) {
-                responseMsg = "$pi.rsp," +jsonMessage.get("message").getAsString().substring(8);
+                response.addProperty("id", "response");
+                responseMsg = "$pi.rsp," + jsonMessage.get("message").getAsString().substring(8);
                 commandMsg += jsonMessage.get("message").getAsString().substring(8);
 //                forwardSocketCommand(commandMsg);
             }
             else {
-                responseMsg = "$pi.rfs,msg{" + jsonMessage.get("message").getAsString() + "}";
+                response.addProperty("id", "refused");
+                responseMsg = "$pi.rfs,cmd{" + jsonMessage.get("message").getAsString() + "}";
             }
-            response.addProperty("id", "response");
+
             response.addProperty("from", this.NAME_RASP);
             response.addProperty("to", this.namePeer);
             response.addProperty("message", responseMsg);
