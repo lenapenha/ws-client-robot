@@ -1,4 +1,4 @@
-package sample.component;
+package com.co.wno.etalk.client.component;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -6,7 +6,7 @@ import org.springframework.web.socket.TextMessage;
 
 import javafx.scene.control.TextField;
 import javafx.scene.input.KeyCode;
-import sample.websocket.SimpleClientWebSocketHandler;
+import com.co.wno.etalk.client.websocket.SimpleClientWebSocketHandler;
 
 @Component
 public class InputTextFieldComponent extends TextField {

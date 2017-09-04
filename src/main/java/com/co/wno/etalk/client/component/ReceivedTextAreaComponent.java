@@ -1,4 +1,4 @@
-package sample.component;
+package com.co.wno.etalk.client.component;
 
 import org.springframework.stereotype.Component;
 

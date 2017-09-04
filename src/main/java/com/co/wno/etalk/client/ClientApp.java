@@ -1,4 +1,4 @@
-package sample;
+package com.co.wno.etalk.client;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
@@ -7,9 +7,8 @@ import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Lazy;
 
 import javafx.application.Application;
-import javafx.scene.Scene;
 import javafx.stage.Stage;
-import sample.component.MainLayout;
+import com.co.wno.etalk.client.component.MainLayout;
 
 @Lazy
 @SpringBootApplication
